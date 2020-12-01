@@ -1,31 +1,51 @@
-version: '3.2'
+version: '3.3'
 
 services:
-  elasticsearch:
+  filebeat:
     build:
-      context: elasticsearch/
+      context: filebeat/
       args:
         ELK_VERSION: $ELK_VERSION
     volumes:
       - type: bind
-        source: ./elasticsearch/config/elasticsearch.yml
-        target: /usr/share/elasticsearch/config/elasticsearch.yml
+        source: ./filebeat/config/filebeat.yml
+        target: /usr/share/filebeat/filebeat.yml
         read_only: true
-      - type: volume
-        source: elasticsearch
-        target: /usr/share/elasticsearch/data
-    ports:
-      - "9200:9200"
-      - "9300:9300"
-    environment:
-      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
-      ELASTIC_PASSWORD: changeme
-      # Use single node discovery in order to disable production mode and avoid bootstrap checks.
-      # see: https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
-      discovery.type: single-node
+      - type: bind
+        source: ./data/input.log
+        target: /usr/share/logData/input.log
+        read_only: true
+    ports: 
+      - "5000:5000/tcp"
     networks:
       - elk
+    depends_on:
+      - elasticsearch
+    #restart: 
+    #  always
 
+  zookeeper:
+    image: wurstmeister/zookeeper
+    ports:
+      - "2181:2181"
+    #restart: 
+    #  always
+
+  kafka:
+    image: wurstmeister/kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_ADVERTISED_HOST_NAME: localhost
+      KAFKA_CREATE_TOPICS: "test:1:1"
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+    volumes:
+     - type: bind
+       source: /var/run/docker.sock
+       target: /var/run/docker.sock
+    #restart: 
+    #  always
+  
   logstash:
     build:
       context: logstash/
@@ -44,32 +64,40 @@ services:
       - "5044:5044"
       - "9600:9600"
     environment:
-      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+      LS_JAVA_OPTS: "-Xmx512m -Xms512m"
     networks:
       - elk
     depends_on:
       - elasticsearch
-
-  filebeat:
+    #restart: 
+    #  always
+  
+  elasticsearch:
     build:
-      context: filebeat/
+      context: elasticsearch/
       args:
         ELK_VERSION: $ELK_VERSION
     volumes:
       - type: bind
-        source: ./filebeat/config/filebeat.yml
-        target: /usr/share/filebeat/config/filebeat.yml
+        source: ./elasticsearch/config/elasticsearch.yml
+        target: /usr/share/elasticsearch/config/elasticsearch.yml
         read_only: true
-      - type: bind
-        source: /var/log/system.log
-        target: /var/log/system.log
-        read_only: true
-    ports: 
-      - "5000:5000/tcp"
+      - type: volume
+        source: elasticsearch
+        target: /usr/share/elasticsearch/data
+    ports:
+      - "9200:9200"
+      - "9300:9300"
+    environment:
+      ES_JAVA_OPTS: "-Xmx512m -Xms512m"
+      ELASTIC_PASSWORD: changeme
+      # Use single node discovery in order to disable production mode and avoid bootstrap checks.
+      # see: https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
+      discovery.type: single-node
     networks:
       - elk
-    depends_on:
-      - elasticsearch
+    #restart: 
+    #  always
 
   kibana:
     build:
@@ -87,6 +115,8 @@ services:
       - elk
     depends_on:
       - elasticsearch
+    #restart: 
+    #  always
 
 networks:
   elk:

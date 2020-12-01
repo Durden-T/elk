@@ -1,12 +1,15 @@
 filebeat.inputs:
-- type: log 
-  paths:
-    - /var/log/system.log
+#- type: log 
+#  enabled: true
+#  paths:
+#    - /usr/share/logData/input.log
 - type: tcp
+  enabled: true
   max_message_size: 10MiB
   host: "localhost:5000"
    # - /usr/share/filebeat/data/input.log
   
-output.logstash:
-	hosts: ["localhost:5044"]
-
+#output.logstash:
+ # hosts: ["logstash:5044"]
+output.console:
+  pretty: true
