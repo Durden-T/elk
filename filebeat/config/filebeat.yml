@@ -1,0 +1,9 @@
+filebeat.inputs:
+- type: log 
+  paths:
+    - /var/log/system.log
+   # - /usr/share/filebeat/data/input.log
+  
+output.logstash:
+	hosts: ["localhost:5044"]
+

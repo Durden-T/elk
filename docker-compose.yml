@@ -42,11 +42,29 @@ services:
         read_only: true
     ports:
       - "5044:5044"
-      - "5000:5000/tcp"
-      - "5000:5000/udp"
       - "9600:9600"
+      - "5000/tcp"
     environment:
       LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    networks:
+      - elk
+    depends_on:
+      - elasticsearch
+
+  filebeat:
+    build:
+      context: filebeat/
+      args:
+        ELK_VERSION: $ELK_VERSION
+    volumes:
+      - type: bind
+        source: ./filebeat/config/filebeat.yml
+        target: /usr/share/filebeat/config/filebeat.yml
+        read_only: true
+      - type: bind
+        source: /var/log/system.log
+        target: /var/log/system.log
+        read_only: true
     networks:
       - elk
     depends_on:
