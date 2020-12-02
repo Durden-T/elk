@@ -1,0 +1,23 @@
+filebeat.inputs:
+- type: log 
+  paths:
+    - /usr/share/logData/input.log
+- type: tcp
+  max_message_size: 10MiB
+  host: "0.0.0.0:5000"
+  
+#output.logstash:
+#  hosts: ["logstash:5044"]
+output.kafka:
+  # initial brokers for reading cluster metadata
+  hosts: ["10.128.202.41:9092"]
+
+  # message topic selection + partitioning
+  topic: test
+  partition.round_robin:
+    reachable_only: false
+
+  required_acks: 1
+  compression: gzip
+  max_message_bytes: 1000000
+  keep_alive: 10s
