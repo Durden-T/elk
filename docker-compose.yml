@@ -2,50 +2,59 @@ version: '3.3'
 
 services:
   filebeat:
-    image: docker.elastic.co/beats/filebeat:$ELK_VERSION
+    image: docker.elastic.co/beats/filebeat:${ELK_VERSION}
     volumes:
       - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - ./data/input.log:/usr/share/logData/input.log:ro
-    ports: 
-      - "5000:5000/tcp"
+      - ./data:/usr/share/logData:ro
     depends_on:
       - elasticsearch
       - kafka
+    networks:
+      - elk
+    restart: unless-stopped
 
   zookeeper:
     image: wurstmeister/zookeeper
     ports:
       - "2181:2181"
+    networks:
+      - elk
+    restart: unless-stopped
 
   kafka:
     image: wurstmeister/kafka
     ports:
       - "9092:9092"
     environment:
-      #ifconfig en0 | grep 'inet ' |  awk '{ print $2}'
-      KAFKA_ADVERTISED_HOST_NAME: 10.128.202.41
+      KAFKA_ADVERTISED_HOST_NAME: ${KAFKA_HOST_NAME}
       KAFKA_CREATE_TOPICS: "test:1:1"
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on: 
       - zookeeper
+    networks:
+      - elk
+    restart: unless-stopped
+
   
   logstash:
-    image: docker.elastic.co/logstash/logstash:$ELK_VERSION
+    image: docker.elastic.co/logstash/logstash:${ELK_VERSION}
     volumes:
       - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
-    ports:
-      - "5044:5044"
-    environment:
-      LS_JAVA_OPTS: "-Xmx256m -Xms256m"
+    #environment:
+      #LS_JAVA_OPTS: "-Xmx512m -Xms512m"
     depends_on:
       - elasticsearch
       - kafka
+    networks:
+      - elk
+    restart: unless-stopped
+
   
   elasticsearch:
-    image: docker.elastic.co/elasticsearch/elasticsearch:$ELK_VERSION
+    image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
     volumes:
       - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
       - elasticsearch:/usr/share/elasticsearch/data
@@ -53,19 +62,19 @@ services:
       - "9200:9200"
       - "9300:9300"
     environment:
-      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+     # ES_JAVA_OPTS: "-Xmx1g -Xms1g"
       # Use single node discovery in order to disable production mode and avoid bootstrap checks.
       # see: https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
       discovery.type: single-node
+    networks:
+      - elk
+    restart: unless-stopped
 
-  kibana:
-    image: docker.elastic.co/kibana/kibana:$ELK_VERSION
-    volumes:
-      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
-    ports:
-      - "5601:5601"
-    depends_on:
-      - elasticsearch
+
 
 volumes:
   elasticsearch:
+
+networks:
+  elk:
+    driver: bridge

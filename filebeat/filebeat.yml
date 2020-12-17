@@ -1,13 +1,16 @@
 filebeat.inputs:
 - type: log 
   paths:
-    - /usr/share/logData/input.log
-- type: tcp
-  max_message_size: 10MiB
-  host: "0.0.0.0:5000"
+    - /usr/share/logData/*.log
+    #- /var/log/**/*.log
+    #- /var/log/beats/*.log
+  tags: app
+  fields_under_root: true
   
 #output.logstash:
 #  hosts: ["logstash:5044"]
+#output.console:
+#  pretty: true
 output.kafka:
   # initial brokers for reading cluster metadata
   hosts: ["10.128.202.41:9092"]
@@ -15,9 +18,9 @@ output.kafka:
   # message topic selection + partitioning
   topic: test
   partition.round_robin:
-    reachable_only: false
-
-  required_acks: 1
-  compression: gzip
-  max_message_bytes: 1000000
+    reachable_only: true
   keep_alive: 10s
+
+
+#多久清理一次registry文件，默认值为0，运行时间长可能会导致该文件变大带来性能问题。
+clean_inactive: 72h
