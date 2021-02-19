@@ -4,23 +4,34 @@ filebeat.inputs:
     - /usr/share/logData/*.log
     #- /var/log/**/*.log
     #- /var/log/beats/*.log
-  tags: app
+  fields: 
+    app: hadoop
   fields_under_root: true
-  
+  #ignore_older: 2h
+
+
+processors:            #这个地方需要注意，此配置是将日志输出格式过滤掉，一般情况下，一些无用的日志字段我们可以删除，只看关键性的信息
+- drop_fields:
+   fields: ["@metadata", "log", "input", "agent", "ecs"] #剩message tags host @timestamp
+
+registry_flush: 10ms
 #output.logstash:
 #  hosts: ["logstash:5044"]
 #output.console:
 #  pretty: true
+
 output.kafka:
   # initial brokers for reading cluster metadata
-  hosts: ["10.128.202.41:9092"]
+  hosts: ${kafka_hosts}
 
   # message topic selection + partitioning
-  topic: test
+  topic: filebeat
   partition.round_robin:
     reachable_only: true
   keep_alive: 10s
-
+  compression: lz4
+  bulk_flush_frequency: 100ms
+  #workers: 4 # kafka分区数
 
 #多久清理一次registry文件，默认值为0，运行时间长可能会导致该文件变大带来性能问题。
 clean_inactive: 72h
