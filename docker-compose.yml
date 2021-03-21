@@ -1,11 +1,11 @@
-version: '3.3'
+version: '3.2'
 
 services:
   filebeat:
     image: docker.elastic.co/beats/filebeat:${ELK_VERSION}
     volumes:
       - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - ./data:/usr/share/logData:ro
+      - ./data:/usr/share/logData:ro #测试数据
       - filebeat:/usr/share/filebeat/data
     #networks:
     #  - elk
@@ -31,9 +31,9 @@ services:
     ports:
       - "9092:9092"
     environment:
-      KAFKA_BROKER_ID: 0
+      KAFKA_BROKER_ID: 0 # 手动修改/ 取消注释下一行
+      #BROKER_ID_COMMAND: "hostname | awk -F'-' '{print $$2}'"
       KAFKA_ADVERTISED_HOST_NAME: ${KAFKA_HOST_NAME}
-      #KAFKA_CREATE_TOPICS: "filebeat:1:1,hadoop_log_input:4:1,hadoop_log_output:4:1,hadoop_template_backup:1:1"
       KAFKA_CREATE_TOPICS: "filebeat:1:1,hadoop_log_input:1:1,hadoop_log_output:1:1"
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"
