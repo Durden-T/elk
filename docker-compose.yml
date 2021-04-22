@@ -1,100 +1,81 @@
 version: '3.2'
 
+# 修改自https://github.com/deviantony/docker-elk
+
 services:
   filebeat:
     image: docker.elastic.co/beats/filebeat:${ELK_VERSION}
     volumes:
-      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro #配置文件
       - ./data:/usr/share/logData:ro #测试数据
-      - filebeat:/usr/share/filebeat/data
-    #networks:
-    #  - elk
+      - filebeat:/usr/share/filebeat/data #持久化数据
     environment: 
-      kafka_hosts: ${FILEBEAT_KAFKA_HOSTS}
-    depends_on: 
-      - kafka
+      kafka_hosts: ${FILEBEAT_KAFKA_HOSTS} # kafka路径
     restart: unless-stopped
 
   zookeeper:
     image: zookeeper
     ports:
       - "2181:2181"
-    #networks:
-    #  - elk
     volumes:
-      - zookeeperdata:/data
-      - zookeeperdatalog:/datalog
+      - zookeeperdata:/data #持久化数据
+      - zookeeperdatalog:/datalog #持久化数据
     restart: unless-stopped
 
-  kafka:
+  kafka: # 建议kafka mysql等不使用docker 一般都有kafka集群 可以直接用 效率会更高 es同理
     image: wurstmeister/kafka
     ports:
       - "9092:9092"
     environment:
-      KAFKA_BROKER_ID: 0 # 手动修改/ 取消注释下一行
+      KAFKA_BROKER_ID: 0 # 每个kafka实例的broker id应不一样；也可以试着删掉这行，然后去掉下面一行注释，但有些机器可能不会生效
       #BROKER_ID_COMMAND: "hostname | awk -F'-' '{print $$2}'"
-      KAFKA_ADVERTISED_HOST_NAME: ${KAFKA_HOST_NAME}
-      KAFKA_CREATE_TOPICS: "filebeat:1:1,hadoop_log_input:1:1,hadoop_log_output:1:1"
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G"
-      KAFKA_LOG_DIRS: /kafka/kafka-logs
+      KAFKA_ADVERTISED_HOST_NAME: ${KAFKA_HOST_NAME}  # kafka的advertised.host.name
+      KAFKA_CREATE_TOPICS: "filebeat:1:1,hadoop_log_input:1:1,hadoop_log_output:1:1" # 创建topic，也可删掉这行，手动创建
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181 # zookeeper地址
+      KAFKA_HEAP_OPTS: "-Xmx1G -Xms1G" # 内存参数
+      KAFKA_LOG_DIRS: /kafka/kafka-logs # 指定持久化文件位置
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-      - kafka:/kafka
-    #networks:
-    #  - elk
-    depends_on: 
-      - zookeeper
+      - kafka:/kafka #持久化数据
     restart: unless-stopped
 
   logstash:
     image: docker.elastic.co/logstash/logstash:${ELK_VERSION}
     volumes:
-      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro
-      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
-      - ./output:/usr/share/logstash/output
+      - ./logstash/config/logstash.yml:/usr/share/logstash/config/logstash.yml:ro # 配置文件
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro  # 配置文件
       - logstash:/usr/share/logstash/data
     environment:
-      LS_JAVA_OPTS: "-Xmx512m -Xms512m"
-      kafka_hosts: ${LOGSTASH_KAFKA_HOSTS}
-   # networks:
-    #  - elk
-    depends_on:
-      #- elasticsearch
-      - kafka
+      LS_JAVA_OPTS: "-Xmx512m -Xms512m" # 内存参数
+      kafka_hosts: ${LOGSTASH_KAFKA_HOSTS} # kafka地址
     restart: unless-stopped
 
   
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:${ELK_VERSION}
     volumes:
-      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro
-      - elasticsearch:/usr/share/elasticsearch/data
+      - ./elasticsearch/config/elasticsearch.yml:/usr/share/elasticsearch/config/elasticsearch.yml:ro # 配置文件
+      - elasticsearch:/usr/share/elasticsearch/data # 持久化地址
     ports:
       - "9200:9200"
       - "9300:9300"
     environment:
-      ES_JAVA_OPTS: "-Xmx1g -Xms1g"
+      ES_JAVA_OPTS: "-Xmx1g -Xms1g" # 内存参数
       # Use single node discovery in order to disable production mode and avoid bootstrap checks.
       # see: https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
-      discovery.type: single-node
-   # networks:
-   #   - elk
+      discovery.type: single-node #扩展集群模式见https://github.com/deviantony/docker-elk/wiki/Elasticsearch-cluster
     restart: unless-stopped
 
 
   kibana:
     image: docker.elastic.co/kibana/kibana:${ELK_VERSION}
     volumes:
-      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro
+      - ./kibana/config/kibana.yml:/usr/share/kibana/config/kibana.yml:ro # 配置文件
     ports:
       - "5601:5601"
-   # networks:
-   #   - elk
-    depends_on: 
-      - elasticsearch
     restart: unless-stopped
 
+# 将容器内的文件路径映射到volume
 volumes:
   elasticsearch:
   filebeat:
@@ -102,6 +83,3 @@ volumes:
   zookeeperdata:
   zookeeperdatalog:
   kafka:
-#networks:
-#  elk:
-#   driver: bridge

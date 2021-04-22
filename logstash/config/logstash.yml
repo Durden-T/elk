@@ -5,4 +5,4 @@
 #http.host: "0.0.0.0"
 #monitoring.elasticsearch.hosts: http://elasticsearch:9200
 queue.type: persisted
-#pipeline.workers
+#pipeline.workers：4 #设为kafka分区数

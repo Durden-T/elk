@@ -1,36 +1,33 @@
 filebeat.inputs:
 - type: log 
   paths:
-    - /usr/share/logData/*.log
-    #- /var/log/**/*.log
-    #- /var/log/beats/*.log
+    - /usr/share/logData/**/*.log # 日志文件路径
   fields: 
-    app: hadoop
-  fields_under_root: true
-  #ignore_older: 2h
+    app: hadoop # 标志这个来源的日志所属于的应用
+  fields_under_root: true # 将app字段放在json的顶层
+  #ignore_older: 2h # 忽略2小时前的日志，避免收集过期日志
+  multiline.type: pattern # 多行模式，识别多行日志，并把他们合并为1行
+  multiline.pattern: '^[0-9]{4}-[0-9]{2}-[0-9]{2}' # 日期开头的，合并为一行 2021-01-01
+  multiline.negate: true # 表示不匹配到pattern时，追加到前一行
+  multiline.match: after  # 表示合并到前一行的最后位置
 
 
-processors:            #这个地方需要注意，此配置是将日志输出格式过滤掉，一般情况下，一些无用的日志字段我们可以删除，只看关键性的信息
+processors:    #这个地方需要注意，此配置是将日志输出格式过滤掉，一般情况下，一些无用的日志字段我们可以删除，只看关键性的信息
 - drop_fields:
-   fields: ["@metadata", "log", "input", "agent", "ecs"] #剩message tags host @timestamp
+   fields: ["@metadata", "log", "input", "agent", "ecs"] # 删掉一些无用字段 剩message tags host @timestamp
 
-registry_flush: 10ms
-#output.logstash:
-#  hosts: ["logstash:5044"]
-#output.console:
-#  pretty: true
-
+registry_flush: 10ms # 10ms一次 将目前的日志文件跟踪进度保存到磁盘，异常重启时，通过读取registry恢复上次读到的位置
 output.kafka:
   # initial brokers for reading cluster metadata
   hosts: ${kafka_hosts}
 
   # message topic selection + partitioning
   topic: filebeat
-  partition.round_robin:
-    reachable_only: true
-  keep_alive: 10s
-  compression: lz4
-  bulk_flush_frequency: 100ms
+  partition.round_robin: # 使用负载均衡选择分区
+    reachable_only: true # 只使用能连接成功的分区
+  keep_alive: 10s # 保持与kafka的连接
+  compression: lz4 # 压缩算法
+  bulk_flush_frequency: 100ms #  发送批量Kafka请求之前需要等待的时间
   #workers: 4 # kafka分区数
 
 #多久清理一次registry文件，默认值为0，运行时间长可能会导致该文件变大带来性能问题。
