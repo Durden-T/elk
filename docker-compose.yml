@@ -5,6 +5,7 @@ version: '3.2'
 services:
   filebeat:
     image: docker.elastic.co/beats/filebeat:${ELK_VERSION}
+    command: filebeat -e -strict.perms=false # windows下忽略严格权限
     volumes:
       - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro #配置文件
       - ./data:/usr/share/logData:ro #测试数据
@@ -46,7 +47,7 @@ services:
       - ./logstash/pipeline:/usr/share/logstash/pipeline:ro  # 配置文件
       - logstash:/usr/share/logstash/data
     environment:
-      LS_JAVA_OPTS: "-Xmx512m -Xms512m" # 内存参数
+      LS_JAVA_OPTS: "-Xmx1G -Xms1G" # 内存参数
       kafka_hosts: ${LOGSTASH_KAFKA_HOSTS} # kafka地址
     restart: unless-stopped
 
@@ -60,7 +61,7 @@ services:
       - "9200:9200"
       - "9300:9300"
     environment:
-      ES_JAVA_OPTS: "-Xmx1g -Xms1g" # 内存参数
+      ES_JAVA_OPTS: "-Xmx3G -Xms3G" # 内存参数
       # Use single node discovery in order to disable production mode and avoid bootstrap checks.
       # see: https://www.elastic.co/guide/en/elasticsearch/reference/current/bootstrap-checks.html
       discovery.type: single-node #扩展集群模式见https://github.com/deviantony/docker-elk/wiki/Elasticsearch-cluster
