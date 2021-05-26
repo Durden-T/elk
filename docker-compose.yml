@@ -28,6 +28,7 @@ services:
     ports:
       - "9092:9092"
     environment:
+      KAFKA_ADVERTISED_PORT: 9092 
       KAFKA_BROKER_ID: 0 # 每个kafka实例的broker id应不一样；也可以试着删掉这行，然后去掉下面一行注释，但有些机器可能不会生效
       #BROKER_ID_COMMAND: "hostname | awk -F'-' '{print $$2}'"
       KAFKA_ADVERTISED_HOST_NAME: ${KAFKA_HOST_NAME}  # kafka的advertised.host.name
